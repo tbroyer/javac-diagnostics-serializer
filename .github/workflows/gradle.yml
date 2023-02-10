@@ -1,0 +1,137 @@
+name: CI
+
+on:
+  push:
+    paths-ignore:
+      - '**/*.md'
+  pull_request:
+    paths-ignore:
+      - '**/*.md'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Build with Gradle
+        id: gradle-build
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: :build-logic:build build --stacktrace
+
+      - name: Store reports
+        if: always() && (steps.gradle-build.outcome == 'success' || steps.gradle-build.outcome == 'failure')
+        uses: actions/upload-artifact@v3
+        with:
+          name: reports
+          path: |
+            **/build/reports/
+            **/build/test-results/
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Build with Gradle
+        id: gradle-build
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: :build-logic:build build --stacktrace
+
+      - name: Store reports
+        if: always() && (steps.gradle-build.outcome == 'success' || steps.gradle-build.outcome == 'failure')
+        uses: actions/upload-artifact@v3
+        with:
+          name: windows-reports
+          path: build/reports/
+
+  test-jdk:
+    needs: linux
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: [ '17', '19' ]
+        experimental: [ false ]
+        include:
+          - java: '20'
+            experimental: true
+    continue-on-error: ${{ matrix.experimental }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: |
+            ${{ matrix.java }}${{ matrix.experimental && '-ea' || '' }}
+            11
+
+      - name: Setup environment
+        run: |
+          echo "org.gradle.java.installations.auto-download=false" | tee -a gradle.properties
+          echo "org.gradle.java.installations.fromEnv=JAVA_HOME_${{ matrix.java }}_X64" | tee -a gradle.properties
+
+      - name: Build with Gradle
+        id: gradle-build
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: test "-Ptest.java-toolchain=${{ matrix.java }}"
+
+      - name: Store reports
+        if: always() && (steps.gradle-build.outcome == 'success' || steps.gradle-build.outcome == 'failure')
+        uses: actions/upload-artifact@v3
+        with:
+          name: jdk-${{ matrix.java }}-tests
+          path: |
+            **/build/reports/tests/test/
+            **/build/test-results/
+
+  test-gradle:
+    needs: linux
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        gradle: [ '7.5.1', '7.4.2', '7.3.3', '7.2', '7.1.1' ]
+        experimental: [ false ]
+        include:
+          - gradle: '8.0-rc-5'
+            experimental: true
+    continue-on-error: ${{ matrix.experimental }}
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+
+      - name: Build with Gradle
+        id: gradle-build
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: test "-Ptest.gradle-version=${{ matrix.gradle }}"
+
+      - name: Store reports
+        if: always() && (steps.gradle-build.outcome == 'success' || steps.gradle-build.outcome == 'failure')
+        uses: actions/upload-artifact@v3
+        with:
+          name: gradle-${{ matrix.gradle }}-tests
+          path: |
+            **/build/reports/tests/test/
+            **/build/test-results/
