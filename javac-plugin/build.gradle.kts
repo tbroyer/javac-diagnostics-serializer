@@ -15,6 +15,8 @@ dependencies {
 
     compileOnlyApi(libs.autoService.annotations)
     annotationProcessor(libs.autoService)
+
+    compileOnly(libs.errorprone.checkApi)
 }
 
 val JPMS_ARGS = listOf(
@@ -23,7 +25,7 @@ val JPMS_ARGS = listOf(
 )
 
 tasks {
-    compileJava {
+    withType<JavaCompile> {
         options.compilerArgs.addAll(
             JPMS_ARGS,
         )

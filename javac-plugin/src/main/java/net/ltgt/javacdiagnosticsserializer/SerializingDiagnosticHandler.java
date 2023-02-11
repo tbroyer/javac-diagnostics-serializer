@@ -15,6 +15,7 @@
  */
 package net.ltgt.javacdiagnosticsserializer;
 
+import com.google.errorprone.JavacErrorDescription;
 import com.sun.tools.javac.util.JCDiagnostic;
 import com.sun.tools.javac.util.Log;
 import java.io.BufferedWriter;
@@ -47,13 +48,41 @@ public class SerializingDiagnosticHandler extends Log.DiagnosticHandler implemen
     if (!shouldIgnore(diag)) {
       try {
         writer.write(
-            diag.getSource().getName()
-                + ":"
-                + diag.getLineNumber()
-                + ": "
-                + diag.getKind()
-                + ": "
-                + diag.getMessage(locale));
+            diag.getSource().getName() + ":" + diag.getLineNumber() + ": " + diag.getKind() + ": ");
+        switch (diag.getCode()) {
+          case "compiler.err.error.prone":
+          case "compiler.warn.error.prone":
+          case "compiler.note.error.prone":
+            // Be extra-defensive, we don't want any exception here
+            if (diag.getArgs().length == 1
+                && diag.getArgs()[0] != null
+                && diag.getArgs()[0]
+                    .getClass()
+                    .getName()
+                    .equals("com.google.errorprone.JavacErrorDescription")) {
+              var description = (JavacErrorDescription) diag.getArgs()[0];
+              writer.write(
+                  "ruleId="
+                      + description.description().checkName
+                      + ", message="
+                      + description.description().getRawMessage()
+                      + ", link="
+                      + description.description().getLink()
+                      + ", fixes="
+                      + description.description().fixes.size()
+                      + ", appliedFixes="
+                      + description.appliedFixes().size());
+              break;
+            }
+            // fall-through
+          default:
+            if (diag.hasLintCategory()) {
+              writer.write(
+                  "ruleId=" + diag.getLintCategory() + ", message=" + diag.getMessage(locale));
+            } else {
+              writer.write("message=" + diag.getMessage(locale));
+            }
+        }
         writer.newLine();
       } catch (IOException e) {
         // FIXME

@@ -21,6 +21,8 @@ import static com.google.testing.compile.CompilationSubject.assertThat;
 import com.google.testing.compile.Compilation;
 import com.google.testing.compile.Compiler;
 import com.google.testing.compile.JavaFileObjects;
+import com.sun.tools.javac.api.ClientCodeWrapper.DiagnosticSourceUnwrapper;
+import com.sun.tools.javac.util.JCDiagnostic;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -63,6 +65,9 @@ public class JavacDiagnosticsSerializerPluginTest {
     assertThat(outputFile.exists()).isTrue();
     String outputContent = Files.readString(outputFile.toPath());
     for (Diagnostic<? extends JavaFileObject> diagnostic : compilation.diagnostics()) {
+      if (diagnostic instanceof DiagnosticSourceUnwrapper) {
+        diagnostic = ((DiagnosticSourceUnwrapper) diagnostic).d;
+      }
       assertThat(outputContent)
           .contains(
               diagnostic.getSource().getName()
@@ -71,6 +76,11 @@ public class JavacDiagnosticsSerializerPluginTest {
                   + ": "
                   + diagnostic.getKind()
                   + ": "
+                  + ((diagnostic instanceof JCDiagnostic
+                          && ((JCDiagnostic) diagnostic).hasLintCategory())
+                      ? "ruleId=" + ((JCDiagnostic) diagnostic).getLintCategory() + ", "
+                      : "")
+                  + "message="
                   + diagnostic.getMessage(Locale.getDefault()));
     }
   }

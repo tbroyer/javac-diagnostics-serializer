@@ -15,6 +15,13 @@ include(":javac-plugin", ":gradle-plugin")
 
 dependencyResolutionManagement {
     repositories {
+        mavenLocal {
+            mavenContent {
+                snapshotsOnly()
+                onlyForConfigurations("compileClasspath")
+                includeVersionByRegex("""com\.google\.errorprone""", """error_prone_.*""", "HEAD-SNAPSHOT")
+            }
+        }
         mavenCentral()
     }
 }

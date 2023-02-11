@@ -16,7 +16,28 @@ jobs:
   linux:
     runs-on: ubuntu-latest
     steps:
+      # Build and install (patched) ErrorProne
+
       - uses: actions/checkout@v3
+        with:
+          repository: tbroyer/error-prone
+          ref: javac-diagnostics-serializer
+          path: error-prone
+
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+          cache: maven
+
+      - run: mvn -B -e -ntp install -Dmaven.test.skip
+        working-directory: error-prone
+
+      # Build and test
+
+      - uses: actions/checkout@v3
+        with:
+          path: javac-diagnostics-serializer
 
       - uses: actions/setup-java@v3
         with:
@@ -28,6 +49,7 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: :build-logic:build build --stacktrace
+          build-root-directory: javac-diagnostics-serializer
 
       - name: Store reports
         if: always() && (steps.gradle-build.outcome == 'success' || steps.gradle-build.outcome == 'failure')
@@ -41,7 +63,29 @@ jobs:
   windows:
     runs-on: windows-latest
     steps:
+      # Build and install (patched) ErrorProne
+
       - uses: actions/checkout@v3
+        with:
+          repository: tbroyer/error-prone
+          ref: javac-diagnostics-serializer
+          path: error-prone
+
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+          cache: maven
+
+      - run: mvn -B -e -ntp install -Dmaven.test.skip
+        shell: cmd
+        working-directory: error-prone
+
+      # Build and test
+
+      - uses: actions/checkout@v3
+        with:
+          path: javac-diagnostics-serializer
 
       - uses: actions/setup-java@v3
         with:
@@ -53,13 +97,16 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: :build-logic:build build --stacktrace
+          build-root-directory: javac-diagnostics-serializer
 
       - name: Store reports
         if: always() && (steps.gradle-build.outcome == 'success' || steps.gradle-build.outcome == 'failure')
         uses: actions/upload-artifact@v3
         with:
           name: windows-reports
-          path: build/reports/
+          path: |
+            **/build/reports/
+            **/build/test-results/
 
   test-jdk:
     needs: linux
@@ -73,7 +120,28 @@ jobs:
             experimental: true
     continue-on-error: ${{ matrix.experimental }}
     steps:
+      # Build and install (patched) ErrorProne
+
       - uses: actions/checkout@v3
+        with:
+          repository: tbroyer/error-prone
+          ref: javac-diagnostics-serializer
+          path: error-prone
+
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+          cache: maven
+
+      - run: mvn -B -e -ntp install -Dmaven.test.skip
+        working-directory: error-prone
+
+      # Build and test
+
+      - uses: actions/checkout@v3
+        with:
+          path: javac-diagnostics-serializer
 
       - uses: actions/setup-java@v3
         with:
@@ -92,6 +160,7 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: test "-Ptest.java-toolchain=${{ matrix.java }}"
+          build-root-directory: javac-diagnostics-serializer
 
       - name: Store reports
         if: always() && (steps.gradle-build.outcome == 'success' || steps.gradle-build.outcome == 'failure')
@@ -114,7 +183,28 @@ jobs:
             experimental: true
     continue-on-error: ${{ matrix.experimental }}
     steps:
+      # Build and install (patched) ErrorProne
+
       - uses: actions/checkout@v3
+        with:
+          repository: tbroyer/error-prone
+          ref: javac-diagnostics-serializer
+          path: error-prone
+
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '11'
+          cache: maven
+
+      - run: mvn -B -e -ntp install -Dmaven.test.skip
+        working-directory: error-prone
+
+      # Build and test
+
+      - uses: actions/checkout@v3
+        with:
+          path: javac-diagnostics-serializer
 
       - uses: actions/setup-java@v3
         with:
@@ -126,6 +216,7 @@ jobs:
         uses: gradle/gradle-build-action@v2
         with:
           arguments: test "-Ptest.gradle-version=${{ matrix.gradle }}"
+          build-root-directory: javac-diagnostics-serializer
 
       - name: Store reports
         if: always() && (steps.gradle-build.outcome == 'success' || steps.gradle-build.outcome == 'failure')

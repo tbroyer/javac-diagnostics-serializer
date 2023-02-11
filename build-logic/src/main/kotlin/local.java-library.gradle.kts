@@ -11,7 +11,7 @@ dependencies {
 
 tasks {
     withType<JavaCompile>().configureEach {
-        options.compilerArgs.addAll(listOf("-Werror", "-Xlint:all,-processing"))
+        options.compilerArgs.addAll(listOf("-Werror", "-Xlint:all,-processing,-fallthrough"))
     }
     javadoc {
         (options as CoreJavadocOptions).addBooleanOption("Xdoclint:all,-missing", true)
